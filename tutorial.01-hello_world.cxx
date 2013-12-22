@@ -1,4 +1,5 @@
 #include <memory>
+#include <chrono>
 #include <stdexcept>
 #include <iostream>
 #include <SDL2/SDL.h>
@@ -104,37 +105,38 @@ namespace
     check("SDL / create texture from surface", bool(result));
     return std::move(result);
   }
-}
+  
+  void sdl_render_clear(const SDL_Renderer_t& sdl_renderer)
+  {
+    auto result = SDL_RenderClear(sdl_renderer.get());
+    check("SDL / render clear", result == 0);
+  }
 
-void sdl_render_clear(const SDL_Renderer_t& sdl_renderer)
-{
-  auto result = SDL_RenderClear(sdl_renderer.get());
-  check("SDL / render clear", result == 0);
-}
+  void sdl_render_copy
+  ( const SDL_Renderer_t& sdl_renderer
+  , const SDL_Texture_t& sdl_texture
+  )
+  {
+    auto result = SDL_RenderCopy
+    ( sdl_renderer.get()
+    , sdl_texture.get()
+    , nullptr, nullptr
+    );
+    check("SDL / render copy", result == 0);
+  }
 
-void sdl_render_copy
-( const SDL_Renderer_t& sdl_renderer
-, const SDL_Texture_t& sdl_texture
-)
-{
-  auto result = SDL_RenderCopy
-  ( sdl_renderer.get()
-  , sdl_texture.get()
-  , nullptr, nullptr
-  );
-  check("SDL / render copy", result == 0);
-}
+  void sdl_render_present(const SDL_Renderer_t& sdl_renderer)
+  {
+    SDL_RenderPresent(sdl_renderer.get());
+    nocheck("SDL / render present");
+  }
 
-void sdl_render_present(const SDL_Renderer_t& sdl_renderer)
-{
-  SDL_RenderPresent(sdl_renderer.get());
-  nocheck("SDL / render present");
-}
+  void sdl_delay(const uint32_t time_in_ms)
+  {
+    SDL_Delay(time_in_ms);
+    nocheck("SDL / delay");
+  }
 
-void sdl_delay(const uint32_t time_in_ms)
-{
-  SDL_Delay(time_in_ms);
-  nocheck("SDL / delay");
 }
 
 int main()
