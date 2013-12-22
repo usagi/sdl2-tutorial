@@ -131,9 +131,9 @@ namespace
     nocheck("SDL / render present");
   }
 
-  void sdl_delay(const uint32_t time_in_ms)
+  void sdl_delay(const chrono::milliseconds& duration)
   {
-    SDL_Delay(time_in_ms);
+    SDL_Delay(duration.count());
     nocheck("SDL / delay");
   }
 
@@ -150,7 +150,7 @@ try
   sdl_render_clear(sdl_renderer);
   sdl_render_copy(sdl_renderer, sdl_texture);
   sdl_render_present(sdl_renderer);
-  sdl_delay(3000);
+  sdl_delay(chrono::seconds(3));
 }
 catch(const std::exception& e)
 {
