@@ -24,11 +24,23 @@ namespace
     }
   }
 
+  void nocheck(const string& message)
+  {
+    cout << "\x1b[33m[NC]\x1b[39m: " << message << endl;
+  }
+
   std::shared_ptr<nullptr_t> sdl_initialize()
   {
     auto result = SDL_Init(SDL_INIT_EVERYTHING);
     check("SDL / sdl_initialize", result != -1);
-    return shared_ptr<nullptr_t>(nullptr, [](nullptr_t){ SDL_Quit(); } );
+    return shared_ptr<nullptr_t>
+    ( nullptr
+    , [](nullptr_t)
+      {
+        SDL_Quit();
+        nocheck("SDL / quit");
+      }
+    );
   }
 
   SDL_Window_t sdl_create_window
@@ -94,6 +106,37 @@ namespace
   }
 }
 
+void sdl_render_clear(const SDL_Renderer_t& sdl_renderer)
+{
+  auto result = SDL_RenderClear(sdl_renderer.get());
+  check("SDL / render clear", result == 0);
+}
+
+void sdl_render_copy
+( const SDL_Renderer_t& sdl_renderer
+, const SDL_Texture_t& sdl_texture
+)
+{
+  auto result = SDL_RenderCopy
+  ( sdl_renderer.get()
+  , sdl_texture.get()
+  , nullptr, nullptr
+  );
+  check("SDL / render copy", result == 0);
+}
+
+void sdl_render_present(const SDL_Renderer_t& sdl_renderer)
+{
+  SDL_RenderPresent(sdl_renderer.get());
+  nocheck("SDL / render present");
+}
+
+void sdl_delay(const uint32_t time_in_ms)
+{
+  SDL_Delay(time_in_ms);
+  nocheck("SDL / delay");
+}
+
 int main()
 try
 {
@@ -102,10 +145,10 @@ try
   auto sdl_renderer = sdl_create_renderer(sdl_window);
   auto sdl_surface  = sdl_load_image("sample.png");
   auto sdl_texture  = sdl_create_texture_from_surface(sdl_renderer, sdl_surface);
-  SDL_RenderClear(sdl_renderer.get());
-  SDL_RenderCopy(sdl_renderer.get(), sdl_texture.get(), nullptr, nullptr);
-  SDL_RenderPresent(sdl_renderer.get());
-  SDL_Delay(3000);
+  sdl_render_clear(sdl_renderer);
+  sdl_render_copy(sdl_renderer, sdl_texture);
+  sdl_render_present(sdl_renderer);
+  sdl_delay(3000);
 }
 catch(const std::exception& e)
 {
