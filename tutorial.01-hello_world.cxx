@@ -1,5 +1,6 @@
 #include <memory>
 #include <chrono>
+#include <vector>
 #include <stdexcept>
 #include <iostream>
 #include <SDL2/SDL.h>
@@ -69,7 +70,6 @@ namespace
     ( SDL_CreateRenderer
       ( sdl_window.get(), -1
       , SDL_RENDERER_ACCELERATED
-      | SDL_RENDERER_PRESENTVSYNC
       )
     , SDL_DestroyRenderer
     );
@@ -137,6 +137,45 @@ namespace
     nocheck("SDL / delay");
   }
 
+  vector<SDL_Event> sdl_poll_events()
+  {
+    vector<SDL_Event> events;
+    bool result = false;
+    while(true)
+    {
+      SDL_Event e;
+      result = SDL_PollEvent(&e);
+      if(result == 0)
+        break;
+      events.emplace_back(move(e));
+    }
+
+    return move(events);
+  }
+
+  chrono::microseconds time(const function<void()>& function)
+  {
+    auto frame_start_time = chrono::high_resolution_clock::now();
+    function();
+    return chrono::duration_cast<chrono::microseconds>
+    (chrono::high_resolution_clock::now() - frame_start_time);
+  }
+
+  template<size_t target_fps>
+  void adjust_fps(const function<void()>& function)
+  {
+    auto frame_elapsed_time = time(function);
+    auto frame_delta_time
+      = chrono::microseconds(1000*1000/target_fps) - frame_elapsed_time;
+    nocheck
+    ( string("adjust fps / frame delta time: ")
+    + to_string(frame_delta_time.count())
+    + " [us]"
+    );
+    if(frame_delta_time.count() > 0)
+      sdl_delay(chrono::duration_cast<chrono::milliseconds>(frame_delta_time));
+  }
+
 }
 
 int main()
@@ -147,10 +186,33 @@ try
   auto sdl_renderer = sdl_create_renderer(sdl_window);
   auto sdl_surface  = sdl_load_image("sample.png");
   auto sdl_texture  = sdl_create_texture_from_surface(sdl_renderer, sdl_surface);
-  sdl_render_clear(sdl_renderer);
-  sdl_render_copy(sdl_renderer, sdl_texture);
-  sdl_render_present(sdl_renderer);
-  sdl_delay(chrono::seconds(3));
+
+  bool is_continue = true;
+
+  auto sdl_main = [&]()
+  {
+    nocheck("SDL / main: begin");
+    sdl_render_clear(sdl_renderer);
+    sdl_render_copy(sdl_renderer, sdl_texture);
+    sdl_render_present(sdl_renderer);
+    for(const auto& sdl_event : sdl_poll_events())
+    {
+      switch(sdl_event.type)
+      {
+        case SDL_KEYDOWN:
+        {
+          auto sdl_key = sdl_event.key.keysym.sym;
+          if(sdl_key != SDLK_ESCAPE)
+            break;
+        }
+        case SDL_QUIT:
+          is_continue = false;
+      }
+    }
+    nocheck("SDL / main: end");
+  };
+
+  do adjust_fps<60>(sdl_main); while(is_continue);
 }
 catch(const std::exception& e)
 {
